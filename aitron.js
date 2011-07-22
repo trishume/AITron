@@ -162,7 +162,7 @@ load = function() {
 		}
 	}
 	var p1 = document.getElementById("ai1").value;
-	var p2 = document.getElementById("ai2").value;
+	var p2 = loadXhr("ai.js");
 	ai1 = new Function("side", "map", "pos", "enemypos","key", p1);
 	ai2 = new Function("side", "map", "pos", "enemypos","key", p2);
 	render();
