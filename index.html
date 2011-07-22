@@ -1,13 +1,49 @@
 <html>
 <head>
 	<title>AITRON!!!11!!</title>
+	<script src="http://www.matthewtrost.org/projects/astar/js/astar.js" type="text/javascript" defer="" id="astar"></script>
 	<script src="aitron.js"></script>
 </head>
-<body>
+<body style="margin:140px;background-color:#323232;color:#ffffff;">
 	<canvas id="canvas" width="350" height="500"></canvas>
 	<form submit="#">
+		<select id="maps" onchange="load();">
+			<option>Maps list not loaded</option>
+		</select>
+		<input type="button" value="Load" onclick="load();"></input>
 		<input type="button" value="Start" onclick="start();"></input>
-		<input type="button" value="Step" onclick="step();"></input>
+		<input type="button" value="Step" onclick="step1();"></input>
+		<input type="button" value="Smaller" onclick="smaller();"></input>
+		<input type="button" value="Larger" onclick="larger();"></input>
+		<br />
+		<textarea id="ai1" rows="5" cols="40">if(key == "d") {
+		 return "e";
+		} else if(key == "a") {
+		 return "w";
+		} else if(key == "w") {
+		 return "n";
+		} else if(key == "s") {
+		 return "s";
+		} else {
+		 return "n";
+		}</textarea>
 	</form>
+	<div id="instructions">
+		How to enter:<br />
+		You must write a javascript function that will control your snake through
+		the grid and make it survive for as long as possible. It cannot collide
+		with the walls or itself or its opponent. Each iteration, your AI function
+		will be called and must return one of four strings: "n", "s", "e", or "w",
+		for North, South, East, and West.
+		Case does matter. Your function has four variables at its disposal:<br />
+		<ul><li>map: an array of array of length-1 strings, "#" for wall, "1" for red snake,
+		"2"for blue snake, and " " for empty.</li>
+		<li>side: one of either "1" or "2" representing which snake you are</li>
+		<li>pos: an object with an x property and a y property representing the coordinates of
+		your current snake's head</li>
+		<li>enemypos: a similar object for your opponent</li>
+		</ul>
+		Please store all of your global variables in vars[side].
+	</div>
 </body>
 </html>
