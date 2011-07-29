@@ -9,57 +9,98 @@
  * http://sam.zoy.org/wtfpl/COPYING for more details.
  */
 
-var speed = 8,
-	bs = { "width": 25, "height": 10 },
-	cs = { "width": 19, "height": 19 },
-	canvas, ctx, ai1, ai2, ai1last, ai2last,
-	globalMap = [], vars = [],
-	p1act = [], p2act = [],
-	pkey = "d",
-reloadCanvas = function() {
+var bs = {
+	"width": 25,
+	"height": 10
+};
+
+var cs = {
+	"width": 19,
+	"height": 19
+};
+
+var canvas, ctx, ai1, ai2, ai1last, ai2last;
+
+var globalMap = [], vars = [];
+
+var p1act = [], p2act = [];
+
+var pkey = "d";
+
+var loadCanvas = function() {
+	canvas = document.getElementById("canvas");
+	reloadCanvas();
+	ctx = canvas.getContext("2d");
+};
+
+var reloadCanvas = function() {
 	canvas.setAttribute("width", ((bs.width + 1) * cs.width).toString());
 	canvas.setAttribute("height", ((bs.height + 1) * cs.height).toString());
-},
-loadXhr = function(addr) {
+};
+
+var loadXhr = function(addr) {
 	var xhr = new XMLHttpRequest();
 	xhr.open("GET", addr, false);
 	xhr.send(null);
 	return xhr.responseText;
-},
-render = function() {
+};
+
+var loadMapsList = function() {
+	var mapsText = loadXhr("maps.txt");
+	var maps = mapsText.split("\r\n");
+	var optionsHtml = "\r\n";
+	for (var i = 0; i < maps.length; ++i) {
+		optionsHtml += "<option>" + maps[i] + "</option>\r\n";
+	}
+	document.getElementById("maps").innerHTML = optionsHtml;
+	load();
+};
+
+var loadAI = function() {
+	var p1 = document.getElementById("ai1").value;
+	var p2 = loadXhr("ai.js");
+	ai1 = new Function("side", "map", "pos", "enemypos","key", p1);
+	ai2 = new Function("side", "map", "pos", "enemypos","key", p2);
+};
+
+var renderSquare = function(square) {
+	ctx.save();
+	ctx.lineWidth = 1;
+	switch (square) {
+	  case "#":
+		ctx.fillStyle = "#000";
+		ctx.fillRect(0, 0, cs.width, cs.height);
+		break;
+	  case "1":
+		ctx.fillStyle = "#800000";
+		ctx.fillRect(0, 0, cs.width, cs.height);
+		break;
+	  case "2":
+		ctx.fillStyle = "#000080";
+		ctx.fillRect(0, 0, cs.width, cs.height);
+		break;
+	  case " ":
+		ctx.beginPath();
+		ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
+		ctx.moveTo(0.5, 0.5);
+		ctx.lineTo(cs.width - 0.5, 0.5);
+		ctx.lineTo(cs.width - 0.5, cs.height - 0.5);
+		ctx.lineTo(0.5, cs.height - 0.5);
+		ctx.lineTo(0.5, 0,5);
+		ctx.stroke();
+		break;
+	}
+	ctx.restore();
+};
+
+var render = function() {
 	ctx.save();
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	for (var x = 0; x < bs.width; ++x) {
 		ctx.save();
 		for (var y = 0; y < bs.height; ++y) {
 			ctx.translate(0, cs.height);
-			ctx.save();
-			ctx.lineWidth = 1;
-			switch (globalMap[x][y]) {
-			  case "#":
-				ctx.fillStyle = "#000";
-				ctx.fillRect(0, 0, cs.width, cs.height);
-				break;
-			  case "1":
-				ctx.fillStyle = "#800000";
-				ctx.fillRect(0, 0, cs.width, cs.height);
-				break;
-			  case "2":
-				ctx.fillStyle = "#000080";
-				ctx.fillRect(0, 0, cs.width, cs.height);
-				break;
-			  case " ":
-				ctx.beginPath();
-				ctx.strokeStyle = "rgba(0, 255, 0, 0.3)";
-				ctx.moveTo(0.5, 0.5);
-				ctx.lineTo(cs.width - 0.5, 0.5);
-				ctx.lineTo(cs.width - 0.5, cs.height - 0.5);
-				ctx.lineTo(0.5, cs.height - 0.5);
-				ctx.lineTo(0.5, 0,5);
-				ctx.stroke();
-				break;
-			}
-			ctx.restore();
+			renderSquare(globalMap[x][y]);
 		}
 		ctx.restore();
 		ctx.translate(cs.width, 0);
@@ -86,53 +127,70 @@ render = function() {
 	ctx.stroke();
 	ctx.setTransform(1, 0, 0, 1, 0, 0);
 	ctx.fillStyle = "#FFFFFF";
-	ctx.font = (Math.min(cs.height, 18)).toString() + "pt Ariel";
+	ctx.font = (Math.min(cs.height, 12)).toString() + "pt Ariel";
 	ctx.fillText("AITron by ttm", 0, cs.height);
-},
-applyMove = function(pos, dir) {
+};
+
+var applyMove = function(pos, dir) {
 	switch (dir) {
-	  case "n": return { "x": pos.x, "y": pos.y - 1 };
-	  case "s": return { "x": pos.x, "y": pos.y + 1 };
-	  case "e": return { "x": pos.x + 1, "y": pos.y };
-	  case "w": return { "x": pos.x - 1, "y": pos.y };
-	  default: throw "Invalid move";
+	  case "n":
+		return { "x": pos.x, "y": pos.y - 1 };
+	  case "s":
+		return { "x": pos.x, "y": pos.y + 1 };
+	  case "e":
+		return { "x": pos.x + 1, "y": pos.y };
+	  case "w":
+		return { "x": pos.x - 1, "y": pos.y };
+	  default: throw "Invalid move!";
 	}
-},
-iterate = function() {
+};
+
+var iterate = function() {
 	var p1loc = p1act[p1act.length - 1];
 	var p2loc = p2act[p2act.length - 1];
 	var p1dir = ai1("1", globalMap, p1loc, p2loc,pkey);
+	//console.profile('Measuring ai time');
 	var p2dir = ai2("2", globalMap, p2loc, p1loc,pkey);
-	var p1go, p2go;
-	try { p1go = applyMove(p1loc, p1dir); } catch (e) { throw e + " from player 1!"; }
-	try { p2go = applyMove(p2loc, p2dir); } catch (e) { throw e + " from player 2!"; }
+	//console.profileEnd();
+	var p1go = applyMove(p1loc, p1dir);
+	var p2go = applyMove(p2loc, p2dir);
 	if (p1go.x == p2go.x && p1go.y == p2go.y) throw "Tie!";
 	var p1col = globalMap[p1go.x][p1go.y] != " ";
 	var p2col = globalMap[p2go.x][p2go.y] != " ";
+	globalMap[p1go.x][p1go.y] = "1";
+	globalMap[p2go.x][p2go.y] = "2";
 	if (p1col && p2col) throw "Tie!";
 	else if (p1col) throw "Player 2 wins!";
 	else if (p2col) throw "Player 1 wins!";
-	globalMap[p1go.x][p1go.y] = "1";
-	globalMap[p2go.x][p2go.y] = "2";
+	
 	p1act.push(p1go);
 	p2act.push(p2go);
-	render();
-},
-start = function() { try { iterate(); setTimeout(start, 1000 / speed); } catch (e) { alert(e); } },
-step1 = function() { try { iterate(); } catch (e) { alert(e); } },
-smaller = function() {
-	cs.height = Math.max(10, cs.height - 3);
-	cs.width = Math.max(10, cs.width - 3);
-	reloadCanvas();
-	render();
-},
-larger = function() {
-	cs.height = Math.min(28, cs.height + 3);
-	cs.width = Math.min(28, cs.width + 3);
-	reloadCanvas();
-	render();
-},
-load = function() {
+};
+
+var recIterate = function() {
+	try {
+		iterate();
+		render();
+		setTimeout(recIterate, 200);
+	} catch (e) {
+		alert(e);
+	}
+};
+
+var start = function() {
+	recIterate();
+};
+var step1 = function() {
+	
+	try {
+		iterate();
+		render();
+	} catch (e) {
+		alert(e);
+	}
+};
+
+var load = function() {
 	p1act = [];
 	p2act = [];
 	vars = [];
@@ -161,25 +219,29 @@ load = function() {
 			}
 		}
 	}
-	var p1 = document.getElementById("ai1").value;
-	var p2 = loadXhr("ai.js");
-	ai1 = new Function("side", "map", "pos", "enemypos","key", p1);
-	ai2 = new Function("side", "map", "pos", "enemypos","key", p2);
+	loadAI();
 	render();
 };
+
 document.onkeypress=function(e){
  pkey = String.fromCharCode(e.charCode);
 }
-window.onload = function() {
-	canvas = document.getElementById("canvas");
+
+var smaller = function() {
+	cs.height = Math.max(10, cs.height - 3);
+	cs.width = Math.max(10, cs.width - 3);
 	reloadCanvas();
-	ctx = canvas.getContext("2d");
-	var mapsText = loadXhr("maps.txt");
-	var maps = mapsText.split("\r\n");
-	var optionsHtml = "\r\n";
-	for (var i = 0; i < maps.length; ++i) {
-		optionsHtml += "<option>" + maps[i] + "</option>\r\n";
-	}
-	document.getElementById("maps").innerHTML = optionsHtml;
-	load();
+	render();
+};
+
+var larger = function() {
+	cs.height = Math.min(28, cs.height + 3);
+	cs.width = Math.min(28, cs.width + 3);
+	reloadCanvas();
+	render();
+};
+
+window.onload = function() {
+	loadCanvas();
+	loadMapsList();
 };
